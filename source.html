@@ -1,0 +1,205 @@
+<html>
+
+sample text
+<p><b>bold text</b><br>
+<i>italic text</i>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+
+var canvas;
+var canvasContext;
+
+var scoreLeft=0,scoreRight=0;
+const SCORE_WIN = 2;
+var showWinScreen = false;
+
+var ballSize = 10;
+var ballX = 400;
+var ballY = 300;
+// var ballX = canvas.width/2 - ballSize;
+var ballSpeedX = 10;
+// var ballY = canvas.height/2 - ballSize;
+var ballSpeedY = 10;
+const DEF_SPEED = 10;
+const COLLISION_APPROX = 8;
+const multiY = 0.35;
+
+const PAD_OFFSET = 40; 
+const PAD_WID = 10; 
+const PAD_LEN = 100;
+const PAD_START = (600-PAD_LEN)/2;
+var paddle1 = PAD_START;
+var paddle2 = PAD_START;
+const BOT_SPEED = 40;
+const BOT_ZONE = 0.2;
+
+function calculateMousePos(evt){
+	var rect = canvas.getBoundingClientRect();
+	var root = document.documentElement;
+	var mouseX = evt.clientX - rect.left - root.scrollLeft;
+	var mouseY = evt.clientY - rect.top - root.scrollTop;
+	return {
+		x:mouseX,
+		y:mouseY
+	};
+}
+
+function handleMouseClick(evt){
+	if (showWinScreen){
+		showWinScreen = false;
+		scoreLeft = 0;
+		scoreRight = 0;
+	}
+}
+
+window.onload = function() {
+	console.log("Hello World!");
+	canvas = document.getElementById('gameCanvas');
+	canvasContext = canvas.getContext('2d');
+	var framesPerSecond = 45;
+	setInterval(function() {
+		moveEverything();
+		drawEverything();
+	}, 1000/framesPerSecond);
+
+	canvas.addEventListener('mousemove', 
+		function(evt) {
+			var mousePos = calculateMousePos(evt);
+			paddle1 = mousePos.y - PAD_LEN/2;
+		});
+
+	canvas.addEventListener('mousedown', handleMouseClick);
+}
+
+function moveEverything(){
+	if (showWinScreen){
+		return;
+	}
+	movePaddle();
+	ballX += ballSpeedX;
+	ballY += ballSpeedY;
+
+	//left side collision
+	//paddle hits the ball 
+	var col = Math.abs((ballX - ballSize) - (PAD_OFFSET + PAD_WID));
+	if (col < COLLISION_APPROX && (ballY > (paddle1 - COLLISION_APPROX) && ballY < (paddle1 + PAD_LEN + COLLISION_APPROX))) {
+		console.log("paddle1, paddle1 =", paddle1, "\nball =", ballY);
+		ballSpeedX *= -1;
+		ballSpeedY = (ballY - (paddle1+PAD_LEN/2))*multiY;
+	}
+	//ball flies by
+	if (ballX - ballSize < 0) {
+		console.log("left borderY, paddle1 =", paddle1, "\nball =", ballY);
+		ballSpeedX *= -1;
+		scoreRight += 1;
+		ballReset(scoreRight);
+	}
+	//right side collision
+	//hit
+	var col2 = Math.abs((canvas.width - PAD_OFFSET - PAD_WID) - (ballX + ballSize));  
+	if (col2 < COLLISION_APPROX && (ballY > (paddle2 - COLLISION_APPROX) && ballY < (paddle2 + PAD_LEN + COLLISION_APPROX))) {
+		// console.log("paddle2, paddle2=", paddle2, "\nball=(", ballX, ",", ballY, ")");
+		ballSpeedX *= -1;
+		ballSpeedY = (ballY - (paddle2+PAD_LEN/2))*multiY;
+	}
+	//miss 
+	if (ballX > canvas.width - ballSize) {
+		// console.log("right borderY, paddle2=", paddle2, "\nball=(", ballX, ",", ballY, ")");
+		ballSpeedX *= -1;
+		scoreLeft += 1;
+		ballReset(scoreLeft);
+	} 
+
+	if (ballY - ballSize < 0 || ballY > canvas.height - ballSize) {
+		ballSpeedY *= -1;
+		// console.log("borderX, paddle1=", paddle1, "\npaddle2=", paddle2, "\nball=(", ballX, ",", ballY, ")");
+	} 
+}
+
+function ballReset(score){
+	if (score == SCORE_WIN){
+		showWinScreen = true;
+		return;
+	}
+	ballX = canvas.width/2;
+	ballY = canvas.height/2;
+	ballSpeedX = DEF_SPEED;
+	ballSpeedY = DEF_SPEED;
+	ballSpeedY *= -1;
+}	
+
+function movePaddle(){
+	var padCenter = paddle2 + (PAD_LEN/2);
+	// toMove - area around paddle's center, 
+	//if the ballY is inside this area - paddle doesn't move. 
+	//smoother animation purpose
+	var toMove = padCenter*BOT_ZONE;
+	if (padCenter < ballY - toMove){
+		paddle2 += BOT_SPEED;
+	} else if (padCenter > ballY + toMove){
+		paddle2 -= BOT_SPEED;
+	}
+}
+
+function drawEverything() {
+	drawRect(0,0,canvas.width, canvas.height, 'black');
+	drawRect(canvas.width/2 - 5, 0, 10, canvas.height, 'white');
+	drawCircle(canvas.width/2, canvas.height/2, 15, 'white');
+
+	canvasContext.font = '48px Verdana';
+	if (showWinScreen){
+		canvasContext.fillStyle = 'orange';
+		canvasContext.strokeStyle = 'black';
+		var winner = "Sample";
+		if (scoreLeft > scoreRight){
+			winner = "Left player";
+		} else {
+			winner = "Right player";
+		}
+		winner += " is the winner!";
+		canvasContext.fillText(winner, 75, 400);
+		canvasContext.strokeText(winner, 75, 400);
+		canvasContext.fillText("L:" + scoreLeft, 75,450);
+		canvasContext.fillText("R:" + scoreRight, 475,450);
+		canvasContext.strokeText("L:" + scoreLeft, 75,450);
+		canvasContext.strokeText("R:" + scoreRight, 475,450);
+		canvasContext.font = '30px Verdana';
+		canvasContext.fillText("click to continue", 75, 490);
+		canvasContext.strokeText("click to continue", 75, 490);
+		return;
+	}
+
+	drawRect(PAD_OFFSET, paddle1, PAD_WID, PAD_LEN, 'white');
+
+	drawRect(canvas.width - PAD_OFFSET - PAD_WID, paddle2, PAD_WID, PAD_LEN, 'white');
+
+	drawCircle(ballX, ballY, ballSize, 'orange');
+	
+	canvasContext.fillText(scoreLeft, canvas.width*0.32,canvas.height*0.25);
+
+	canvasContext.fillText(scoreRight, canvas.width*0.67,canvas.height*0.25);
+
+}
+
+function drawRect(leftX, topY, width, height, color){
+	canvasContext.fillStyle = color;
+	canvasContext.fillRect(leftX, topY, width, height);
+}
+
+function drawCircle(centerX, centerY, radius, color){
+	canvasContext.fillStyle = color;
+	canvasContext.strokeStyle = color;
+	canvasContext.beginPath();
+	canvasContext.arc(centerX, centerY, radius, 0, Math.PI*2, true);
+	canvasContext.fill();
+}
+
+
+
+</script>
+
+<pre>end of sample text
+
+</html>
