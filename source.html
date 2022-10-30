@@ -1,19 +1,28 @@
 <html>
 
 sample text
-<p><b>bold text</b><br>
+<p><b>Arcade/Pong</b><br>
 <i>italic text</i>
 
 <canvas id="gameCanvas" width="800" height="600"></canvas>
 
 <script>
 
+///* GAME PARAMETERS *///
+const SCORE_WIN = 7;
+const DEF_SPEED = 10;
+const COLLISION_APPROX = 8;
+const BOT_SPEED = 27;
+const BOT_ZONE = 0.3; //gap of ignorance of the ball. 0.0 - 1.0 
+
 var canvas;
 var canvasContext;
 
+
+///*Interface*///
 var scoreLeft=0,scoreRight=0;
-const SCORE_WIN = 2;
 var showWinScreen = false;
+var isPause = false;
 
 var ballSize = 10;
 var ballX = 400;
@@ -22,8 +31,6 @@ var ballY = 300;
 var ballSpeedX = 10;
 // var ballY = canvas.height/2 - ballSize;
 var ballSpeedY = 10;
-const DEF_SPEED = 10;
-const COLLISION_APPROX = 8;
 const multiY = 0.35;
 
 const PAD_OFFSET = 40; 
@@ -32,8 +39,6 @@ const PAD_LEN = 100;
 const PAD_START = (600-PAD_LEN)/2;
 var paddle1 = PAD_START;
 var paddle2 = PAD_START;
-const BOT_SPEED = 40;
-const BOT_ZONE = 0.2;
 
 function calculateMousePos(evt){
 	var rect = canvas.getBoundingClientRect();
@@ -55,10 +60,9 @@ function handleMouseClick(evt){
 }
 
 window.onload = function() {
-	console.log("Hello World!");
 	canvas = document.getElementById('gameCanvas');
 	canvasContext = canvas.getContext('2d');
-	var framesPerSecond = 45;
+	var framesPerSecond = 60;
 	setInterval(function() {
 		moveEverything();
 		drawEverything();
@@ -71,9 +75,18 @@ window.onload = function() {
 		});
 
 	canvas.addEventListener('mousedown', handleMouseClick);
+	
+	document.addEventListener('keydown', 
+		function(evt){
+			if (evt.keyCode == 80) {
+				isPause = !isPause;
+				console.log('pause pressed. isPause =', isPause);
+			}
+		}, false);
 }
 
 function moveEverything(){
+	
 	if (showWinScreen){
 		return;
 	}
@@ -100,21 +113,18 @@ function moveEverything(){
 	//hit
 	var col2 = Math.abs((canvas.width - PAD_OFFSET - PAD_WID) - (ballX + ballSize));  
 	if (col2 < COLLISION_APPROX && (ballY > (paddle2 - COLLISION_APPROX) && ballY < (paddle2 + PAD_LEN + COLLISION_APPROX))) {
-		// console.log("paddle2, paddle2=", paddle2, "\nball=(", ballX, ",", ballY, ")");
 		ballSpeedX *= -1;
 		ballSpeedY = (ballY - (paddle2+PAD_LEN/2))*multiY;
 	}
 	//miss 
 	if (ballX > canvas.width - ballSize) {
-		// console.log("right borderY, paddle2=", paddle2, "\nball=(", ballX, ",", ballY, ")");
 		ballSpeedX *= -1;
 		scoreLeft += 1;
 		ballReset(scoreLeft);
 	} 
-
+	//horizontal sides
 	if (ballY - ballSize < 0 || ballY > canvas.height - ballSize) {
 		ballSpeedY *= -1;
-		// console.log("borderX, paddle1=", paddle1, "\npaddle2=", paddle2, "\nball=(", ballX, ",", ballY, ")");
 	} 
 }
 
@@ -149,25 +159,18 @@ function drawEverything() {
 	drawCircle(canvas.width/2, canvas.height/2, 15, 'white');
 
 	canvasContext.font = '48px Verdana';
+	canvasContext.fillStyle = 'orange';
+	canvasContext.strokeStyle = 'black';
+
 	if (showWinScreen){
-		canvasContext.fillStyle = 'orange';
-		canvasContext.strokeStyle = 'black';
 		var winner = "Sample";
 		if (scoreLeft > scoreRight){
 			winner = "Left player";
 		} else {
 			winner = "Right player";
 		}
-		winner += " is the winner!";
-		canvasContext.fillText(winner, 75, 400);
-		canvasContext.strokeText(winner, 75, 400);
-		canvasContext.fillText("L:" + scoreLeft, 75,450);
-		canvasContext.fillText("R:" + scoreRight, 475,450);
-		canvasContext.strokeText("L:" + scoreLeft, 75,450);
-		canvasContext.strokeText("R:" + scoreRight, 475,450);
-		canvasContext.font = '30px Verdana';
-		canvasContext.fillText("click to continue", 75, 490);
-		canvasContext.strokeText("click to continue", 75, 490);
+		winner += " wins!";
+		drawWinScreen(winner);
 		return;
 	}
 
@@ -181,6 +184,19 @@ function drawEverything() {
 
 	canvasContext.fillText(scoreRight, canvas.width*0.67,canvas.height*0.25);
 
+}
+
+function drawWinScreen(winner){
+	canvasContext.fillText(winner, 75, 400);
+	canvasContext.strokeText(winner, 75, 400);
+	canvasContext.fillText("L:" + scoreLeft, 75,450);
+	canvasContext.fillText("R:" + scoreRight, 475,450);
+	canvasContext.strokeText("L:" + scoreLeft, 75,450);
+	canvasContext.strokeText("R:" + scoreRight, 475,450);
+	canvasContext.font = '30px Verdana';
+	canvasContext.fillText("click to continue", 75, 490);
+	canvasContext.strokeText("click to continue", 75, 490);
+		
 }
 
 function drawRect(leftX, topY, width, height, color){
